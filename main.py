@@ -15,10 +15,11 @@ Y=HeartData['(num)(prediction)'] #what we are predicting
 
 #print(X.head())
 
-Xtrain,Xeval,Ytrain,Yeval=train_test_split(X,Y,train_size=0.25)
-
-Xtrain=torch.tensor(Xtrain.values(),dtype=torch.float32).to(device)
-Ytrain=torch.tensor(Ytrain.values(),dtype=torch.float32).to(device)
+Xtrain_,Xeval_,Ytrain_,Yeval_=train_test_split(X,Y,train_size=0.25)
+#print(Xtrain_)
+#print(Ytrain_)
+Xtrain=torch.tensor(Xtrain_.values,dtype=torch.float32).to(device)
+Ytrain=torch.tensor(Ytrain_.values,dtype=torch.float32).to(device)
 
 imput_layer_size=Xtrain.shape[1]
 a=70
@@ -50,10 +51,29 @@ for i in range(0,1001):
 
 model.eval()
 with torch.no_grad():
-    Xeval=torch.tensor(Xeval.values,dtype=torch.float32).to(device)
-    Yeval=torch.tensor(Yeval.values,dtype=torch.float32).to(device)
+    Xeval=torch.tensor(Xeval_.values,dtype=torch.float32).to(device)
+    Yeval=torch.tensor(Yeval_.values,dtype=torch.float32).to(device)
 
     model_eval=model(Xeval)
-    eval=
+
+    prepared_list=[]
+
+    for i in model_eval:
+        if i <=0.20:
+            prepared_list.append(0)
+        elif i<=0.40:
+            prepared_list.append(1)
+        elif i<=0.60:
+            prepared_list.append(2)
+        elif i<=0.80:
+            prepared_list.append(3)
+        else:
+            prepared_list.append(4)
+
+    compare=torch.tensor(prepared_list)
+
+    efficiency=(Yeval==compare).float().mean()
+
+    print(f'Skuteczność {efficiency.item()}:.4f')
 
 
