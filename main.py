@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 device=torch.device('cpu')
 if torch.cuda.is_available():
@@ -8,8 +9,10 @@ if torch.cuda.is_available():
 
 
 
-HeartData=pd.read_csv('processed.cleveland.data.csv',sep=',') # we are loading the data
+data=pd.read_csv('processed.cleveland.data.csv',sep=',',na_values=['?']) # we are loading the data
 #print(HeartData.head())
+HeartData=data.dropna()
+#print(HeartData)
 X=HeartData.drop(['(num)(prediction)'],axis=1) # we are sellecting the values that will allow us to infer the (num)(prediction)
 Y=HeartData['(num)(prediction)'] #what we are predicting
 
@@ -18,28 +21,38 @@ Y=HeartData['(num)(prediction)'] #what we are predicting
 Xtrain_,Xeval_,Ytrain_,Yeval_=train_test_split(X,Y,train_size=0.25)
 #print(Xtrain_)
 #print(Ytrain_)
-Xtrain=torch.tensor(Xtrain_.values,dtype=torch.float32).to(device)
+#
+scalar = StandardScaler()   # standarisation
+Xtrain=scalar.fit_transform(Xtrain_)
+Xeval=scalar.transform(Xeval_)
+
+Xtrain=torch.tensor(Xtrain,dtype=torch.float32).to(device)
 Ytrain=torch.tensor(Ytrain_.values,dtype=torch.float32).to(device)
+#print(Ytrain)
+
+
 
 imput_layer_size=Xtrain.shape[1]
-a=70
-b=140
+a=100
+b=240
 model=torch.nn.Sequential(
     torch.nn.Linear(imput_layer_size,a),
     torch.nn.Sigmoid(),
     torch.nn.Linear(a,b),
-    torch.nn.Sigmoid(),
-    torch.nn.Linear(b,5),
+    torch.nn.ReLU(),
+    torch.nn.Linear(b,1),
     torch.nn.Sigmoid()
 ).to(device)
 
-loss=torch.nn.L1Loss()
+loss=torch.nn.BCELoss()# CrossEntropyLoss better for classification problems
 
-opt=torch.optim.SGD(Xtrain.parameters(),lr=0.001)
+opt=torch.optim.SGD(model.parameters(),lr=0.01)
 
-for i in range(0,1001):
+for i in range(0,2501):
 
     output=model(Xtrain)
+    #if i ==2500:
+         #print(output)
     Loss=loss(output,Ytrain.view(-1,1))
 
     opt.zero_grad()
@@ -47,33 +60,23 @@ for i in range(0,1001):
     opt.step()
 
     if i%100==0:
-        print(i,Loss.item())
+        print(i,f'Error: {Loss.item():.4f}')
 
 model.eval()
 with torch.no_grad():
-    Xeval=torch.tensor(Xeval_.values,dtype=torch.float32).to(device)
-    Yeval=torch.tensor(Yeval_.values,dtype=torch.float32).to(device)
+
+    Xeval=torch.tensor(Xeval,dtype=torch.float32).to(device)
+    Yeval=torch.tensor(Yeval_.values,dtype=torch.long).to(device)
+
 
     model_eval=model(Xeval)
+    #print(model_eval)
 
-    prepared_list=[]
 
-    for i in model_eval:
-        if i <=0.20:
-            prepared_list.append(0)
-        elif i<=0.40:
-            prepared_list.append(1)
-        elif i<=0.60:
-            prepared_list.append(2)
-        elif i<=0.80:
-            prepared_list.append(3)
-        else:
-            prepared_list.append(4)
+    #print(model_eval)
+    #print(Yeval)
+    efficiency=(Yeval==model_eval).float().mean()
 
-    compare=torch.tensor(prepared_list)
-
-    efficiency=(Yeval==compare).float().mean()
-
-    print(f'Skuteczność {efficiency.item()}:.4f')
+    print(f'Skuteczność {efficiency.item():.4f}')
 
 
