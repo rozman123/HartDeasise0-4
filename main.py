@@ -41,10 +41,10 @@ model=torch.nn.Sequential(
     torch.nn.Linear(a,b),
     torch.nn.ReLU(),
     torch.nn.Linear(b,1),
-    torch.nn.Sigmoid()
+    torch.nn.ReLU()
 ).to(device)
 
-loss=torch.nn.BCELoss()# CrossEntropyLoss better for classification problems
+loss=torch.nn.BCEWithLogitsLoss()# CrossEntropyLoss better for classification problems
 
 opt=torch.optim.SGD(model.parameters(),lr=0.01)
 
@@ -72,10 +72,11 @@ with torch.no_grad():
     model_eval=model(Xeval)
     #print(model_eval)
 
+    pred=(model_eval>=0.5).float()
 
     #print(model_eval)
     #print(Yeval)
-    efficiency=(Yeval==model_eval).float().mean()
+    efficiency=(Yeval.view_as(pred)==pred).float()
 
     print(f'Skuteczność {efficiency.item():.4f}')
 
